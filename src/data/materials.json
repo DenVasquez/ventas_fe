@@ -1,0 +1,22 @@
+[
+  { "id": 1, "cod": "M-MAD01", "name": "Madera Pino", "unit_cost": 5.00, "stock": 500 },
+  { "id": 2, "cod": "M-MAD02", "name": "Madera Cedro", "unit_cost": 7.50, "stock": 300 },
+  { "id": 3, "cod": "M-TORN01", "name": "Tornillos pequeños", "unit_cost": 0.10, "stock": 1000 },
+  { "id": 4, "cod": "M-TORN02", "name": "Tornillos grandes", "unit_cost": 0.15, "stock": 750 },
+  { "id": 5, "cod": "M-PEG01", "name": "Pegamento industrial", "unit_cost": 2.00, "stock": 400 },
+  { "id": 6, "cod": "M-BARN01", "name": "Barniz brillante", "unit_cost": 3.20, "stock": 200 },
+  { "id": 7, "cod": "M-PINT01", "name": "Pintura blanca", "unit_cost": 2.80, "stock": 150 },
+  { "id": 8, "cod": "M-PINT02", "name": "Pintura negra", "unit_cost": 2.80, "stock": 180 },
+  { "id": 9, "cod": "M-LIJ01", "name": "Lija fina", "unit_cost": 0.25, "stock": 900 },
+  { "id": 10, "cod": "M-HER01", "name": "Bisagra metálica", "unit_cost": 1.50, "stock": 500 },
+  { "id": 11, "cod": "M-COL01", "name": "Cola blanca", "unit_cost": 1.90, "stock": 350 },
+  { "id": 12, "cod": "M-ESP01", "name": "Espuma aislante", "unit_cost": 4.00, "stock": 120 },
+  { "id": 13, "cod": "M-TELA01", "name": "Tela beige", "unit_cost": 3.50, "stock": 250 },
+  { "id": 14, "cod": "M-TELA02", "name": "Tela negra", "unit_cost": 3.70, "stock": 275 },
+  { "id": 15, "cod": "M-MAD03", "name": "Madera Nogal", "unit_cost": 9.00, "stock": 220 },
+  { "id": 16, "cod": "M-MET01", "name": "Chapa metálica", "unit_cost": 6.80, "stock": 160 },
+  { "id": 17, "cod": "M-COR01", "name": "Cordón elástico", "unit_cost": 0.60, "stock": 800 },
+  { "id": 18, "cod": "M-VID01", "name": "Vidrio templado", "unit_cost": 12.00, "stock": 100 },
+  { "id": 19, "cod": "M-MAD04", "name": "Madera reciclada", "unit_cost": 3.00, "stock": 330 },
+  { "id": 20, "cod": "M-ACR01", "name": "Acrílico transparente", "unit_cost": 8.50, "stock": 90 }
+]
