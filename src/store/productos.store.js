@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { fetchMateriales } from '../api/materiales';
 import { fetchProductos, createProducto } from '../api/productos';
-export const useProductoStore = defineStore('producto', {
+export const useProductoStore = defineStore('productoStore', {
   state: () => ({
     productos: [],
     loading: false,
@@ -37,6 +37,7 @@ export const useProductoStore = defineStore('producto', {
       }
     },
         async addProducto(Producto) {
+          console.log("addProducto en store");
       await createProducto(Producto);
       await this.fetchProductos(this.page);
     },

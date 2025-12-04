@@ -4,23 +4,21 @@ export const fetchProductos = async ({ page = 1, limit = 10, search = '' } = {})
   const { data } = await api.get('/productos', {
     params: { page, limit, search }
   });
-
-  // Backend retorna: { success, data: [...] }
-  console.log(data)
   return data;
 };
 
 export const createProducto = async (producto) => {
+  console.log("estoy createProducto");
+  console.log("object", producto);
   const { data } = await api.post('/productos', {
-
     codigo: producto.cod,
-    nombre_producto: producto.name,
-    precio_venta: producto.price,
-    costo_fabricacion: producto.manufacturing_cost,
-    utilidad: producto.utility
+    nombre_producto: producto.nombre_producto,
+    porcentajeRedito: producto.porcentajeRedito,
+    bom: producto.bom
   });
   return data;
 };
+
 
 export const updateProducto = async (id, producto) => {
   const { data } = await api.put(`/productos/${id}`, {

@@ -43,13 +43,13 @@
             <th width="120">Acciones</th>
             <th width="100">Código</th>
             <th>Nombre</th>
-            <th width="120">Costo</th>
-            <th width="120">Stock</th>
+            <th width="120">Costo Fabricación</th>
+            <th width="120">Precio Venta</th>
             <th>Materiales</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="producto in filteredProducts" :key="producto.id">
+          <tr v-for="producto in filteredProducts" :key="producto.id_producto">
             <td>
               <div class="d-flex align-items-center">
                 <button class="btn btn-sm btn-outline-primary me-1" @click="openDialog('view', producto)"
@@ -64,21 +64,12 @@
                         :disabled="productoStore.loading">
                   <i class="fa-solid fa-trash"></i>
                 </button>
-                <span v-if="isLowStock(producto)" 
-                      class="blinking-icon" 
-                      data-bs-toggle="tooltip" 
-                      data-bs-placement="top"
-                      :data-bs-title="`Stock bajo! Mínimo requerido: ${minStockThreshold}`">
-                  <i class="fa-solid fa-triangle-exclamation text-danger fa-lg"></i>
-                </span>
               </div>
             </td>
-            <td>{{ producto.cod }}</td>
-            <td>{{ producto.name }}</td>
-            <td class="text-end">{{ formatCurrency(producto.unit_cost) }}</td>
-            <td class="text-end" :class="{ 'text-danger': isLowStock(producto) }">
-              {{ producto.stock }}
-            </td>
+            <td>{{ producto.codigo }}</td>
+            <td>{{ producto.nombre_producto }}</td>
+            <td class="text-end">{{ formatCurrency(producto.costo_fabricacion) }}</td>
+            <td class="text-end">{{ formatCurrency(producto.precio_venta) }}</td>
             <td>{{ formatBOM(producto.bom) }}</td>
           </tr>
         </tbody>
@@ -101,7 +92,7 @@
             <div class="invalid-feedback">{{ errors.cod }}</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Nombre</label>
+            <label class="form-label">Nombre Producto</label>
             <input v-model="form.name" type="text" class="form-control" :readonly="isViewing" required
                    :class="{ 'is-invalid': errors.name }" />
             <div class="invalid-feedback">{{ errors.name }}</div>
@@ -110,37 +101,36 @@
 
         <div class="row g-2 mb-2">
           <div class="col-md-6">
-            <label class="form-label">Costo unitario (Bs)</label>
-            <input v-model.number="form.unit_cost" type="number" step="0.01" min="0" class="form-control" 
-                   :readonly="isViewing" required :class="{ 'is-invalid': errors.unit_cost }" />
-            <div class="invalid-feedback">{{ errors.unit_cost }}</div>
+            <label class="form-label">Cantidad a producir</label>
+            <input v-model.number="form.cantidadProduccion" type="number" step="1" min="1" class="form-control"
+                   :readonly="isViewing" required :class="{ 'is-invalid': errors.cantidadProduccion }" />
+            <div class="invalid-feedback">{{ errors.cantidadProduccion }}</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Stock</label>
-            <input v-model.number="form.stock" type="number" step="1" min="0" class="form-control" 
-                   :readonly="isViewing" required :class="{ 'is-invalid': errors.stock }" />
-            <div class="invalid-feedback">{{ errors.stock }}</div>
+            <label class="form-label">Porcentaje de redito (%)</label>
+            <input v-model.number="form.porcentajeRedito" type="number" step="1" min="0" max="100" class="form-control"
+                   :readonly="isViewing" required :class="{ 'is-invalid': errors.porcentajeRedito }" />
+            <div class="invalid-feedback">{{ errors.porcentajeRedito }}</div>
           </div>
         </div>
 
         <div class="mb-3">
           <label class="form-label">Lista de Materiales (BOM)</label>
           <div v-for="(item, index) in form.bom" :key="index" class="d-flex align-items-center mb-2">
-            <select v-model="item.cod" class="form-select me-2" :disabled="isViewing" required
+            <select v-model="item.cod_material" class="form-select me-2" :disabled="isViewing" required
                     :class="{ 'is-invalid': errors[`bom-${index}-cod`] }">
               <option value="">Seleccionar material</option>
-              <option v-for="material in materialStore.materiales" :key="material.cod" :value="material.cod"
-                      :disabled="material.stock <= 0">
+              <option v-for="material in materialStore.materiales" :key="material.id" :value="material.id">
                 {{ material.name }} ({{ material.cod }}) - Stock: {{ material.stock }}
               </option>
             </select>
-            <input v-model.number="item.qty" type="number" min="1" step="1" class="form-control me-2" 
+            <input v-model.number="item.cantidad" type="number" min="1" step="1" class="form-control me-2"
                    style="width: 100px;" :readonly="isViewing" required
-                   :class="{ 'is-invalid': errors[`bom-${index}-qty`] }" />
+                   :class="{ 'is-invalid': errors[`bom-${index}-cantidad`] }" />
             <button v-if="!isViewing" type="button" class="btn btn-sm btn-outline-secondary" @click="removeBomItem(index)">
               <i class="fa-solid fa-trash"></i>
             </button>
-            <div class="invalid-feedback">{{ errors[`bom-${index}-cod`] || errors[`bom-${index}-qty`] }}</div>
+            <div class="invalid-feedback">{{ errors[`bom-${index}-cod`] || errors[`bom-${index}-cantidad`] }}</div>
           </div>
           <button v-if="!isViewing" type="button" class="btn btn-sm btn-outline-secondary" @click="addBomItem">
             <i class="fa-solid fa-plus me-2"></i>Agregar Material
@@ -182,45 +172,34 @@ import { useProductoStore } from '../store/productos.store';
 import { useMaterialStore } from '../store/material.store';
 import { Tooltip } from 'bootstrap';
 
-const props = defineProps({
-  isAdmin: {
-    type: Boolean,
-    default: false
-  }
-});
-
 const productoStore = useProductoStore();
 const materialStore = useMaterialStore();
 
-// Refs
 const filter = ref('');
 const productDialog = ref(null);
 const confirmDialog = ref(null);
 const dialogMode = ref('new');
-const minStockThreshold = 10;
 const isSaving = ref(false);
 const isDeleting = ref(false);
 const productToDelete = ref(null);
 
-// Formulario y validación
 const form = reactive({
   id: null,
   cod: '',
   name: '',
-  unit_cost: 0,
-  stock: 0,
+  cantidadProduccion: 1,
+  porcentajeRedito: 30, // ahora es % entero
   bom: []
 });
 
 const errors = reactive({});
 
-// Computed
 const filteredProducts = computed(() => {
   const searchTerm = filter?.value?.toLowerCase();
-  return productoStore.productos.filter(p => 
-    p?.name?.toLowerCase().includes(searchTerm) || 
-    p?.cod?.toLowerCase().includes(searchTerm)
-  ).sort((a, b) => a?.name?.localeCompare(b.name));
+  return productoStore.productos.filter(p =>
+    p?.nombre_producto?.toLowerCase().includes(searchTerm) ||
+    p?.codigo?.toLowerCase().includes(searchTerm)
+  ).sort((a, b) => a?.nombre_producto?.localeCompare(b.nombre_producto));
 });
 
 const dialogTitle = computed(() => {
@@ -234,246 +213,135 @@ const dialogTitle = computed(() => {
 
 const isViewing = computed(() => dialogMode.value === 'view');
 
-// Métodos
 function formatCurrency(value) {
-  return new Intl.NumberFormat('es-BO', { 
-    style: 'currency', 
-    currency: 'BOB' 
-  }).format(value);
+  return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(value);
 }
 
 function formatBOM(bom) {
   return bom?.map(item => {
-    const material = materialStore.materiales.find(m => m.cod === item.cod);
-    return `${material?.name || item.cod} (${item.qty})`;
+    const material = materialStore.materiales.find(m => m.id === item.cod_material);
+    return `${material?.name || item.cod_material} (${item.cantidad})`;
   }).join(', ') || 'Sin materiales';
 }
 
-function isLowStock(product) {
-  return product.stock < minStockThreshold;
-}
-
-function clearErrors() {
-  Object.keys(errors).forEach(key => delete errors[key]);
-}
+function clearErrors() { Object.keys(errors).forEach(key => delete errors[key]); }
 
 function validateForm() {
   clearErrors();
   let isValid = true;
 
-  if (!form.cod.trim()) {
-    errors.cod = 'El código es requerido';
-    isValid = false;
-  }
+  if (!form.cod.trim()) { errors.cod = 'El código es requerido'; isValid = false; }
+  if (!form.name.trim()) { errors.name = 'El nombre es requerido'; isValid = false; }
+  if (form.porcentajeRedito < 0 || form.porcentajeRedito > 100) { errors.porcentajeRedito = 'Debe estar entre 0 y 100'; isValid = false; }
+  if (form.cantidadProduccion < 1) { errors.cantidadProduccion = 'Cantidad mínima 1'; isValid = false; }
 
-  if (!form.name.trim()) {
-    errors.name = 'El nombre es requerido';
-    isValid = false;
-  }
-
-  if (form.unit_cost <= 0) {
-    errors.unit_cost = 'El costo debe ser mayor a 0';
-    isValid = false;
-  }
-
-  if (form.stock < 0) {
-    errors.stock = 'El stock no puede ser negativo';
-    isValid = false;
-  }
-
-  // Validar BOM
   form.bom.forEach((item, index) => {
-    if (!item.cod) {
-      errors[`bom-${index}-cod`] = 'Seleccione un material';
-      isValid = false;
-    }
-
-    if (!item.qty || item.qty <= 0) {
-      errors[`bom-${index}-qty`] = 'Cantidad inválida';
-      isValid = false;
-    } else {
-      const material = materialStore.materiales.find(m => m.cod === item.cod);
-      if (material && material.stock < item.qty * form.stock) {
-        errors[`bom-${index}-qty`] = `Stock insuficiente (${material.stock} disponibles)`;
+    if (!item.cod_material) { errors[`bom-${index}-cod`] = 'Seleccione un material'; isValid = false; }
+    if (!item.cantidad || item.cantidad < 1) { errors[`bom-${index}-cantidad`] = 'Cantidad inválida'; isValid = false; }
+    else {
+      const material = materialStore.materiales.find(m => m.id_material === item.cod_material);
+      if (material && (item.cantidad * form.cantidadProduccion) > material.stock) {
+        errors[`bom-${index}-cantidad`] = `Stock insuficiente (${material.stock} disponibles)`;
         isValid = false;
       }
     }
   });
 
-  if (form.bom.length === 0) {
-    errors.bom = 'Debe agregar al menos un material';
-    isValid = false;
-  }
+  if (form.bom.length === 0) { errors.bom = 'Debe agregar al menos un material'; isValid = false; }
 
   return isValid;
 }
 
 function openDialog(mode, product = null) {
   dialogMode.value = mode;
-  
+
   if (product) {
-    Object.assign(form, JSON.parse(JSON.stringify(product)));
+    form.id = product.id_producto;
+    form.cod = product.codigo;
+    form.name = product.nombre_producto;
+    form.porcentajeRedito = Math.round((product.utilidad / product.costo_fabricacion) * 100);
+    form.cantidadProduccion = 1;
+    form.bom = JSON.parse(JSON.stringify(product.bom || []));
   } else {
-    resetForm();
+    form.id = null;
+    form.cod = `PROD-${(productoStore.productos.length + 1).toString().padStart(3, '0')}`;
+    form.name = '';
+    form.porcentajeRedito = 30;
+    form.cantidadProduccion = 1;
+    form.bom = [];
     addBomItem();
-    // Generar código sugerido
-    if (productoStore.productos.length > 0) {
-      const lastCode = productoStore.productos[productoStore.productos.length - 1].cod;
-      const match = lastCode.match(/(\d+)$/);
-      if (match) {
-        const nextNum = parseInt(match[1]) + 1;
-        form.cod = `PROD-${nextNum.toString().padStart(3, '0')}`;
-      }
-    } else {
-      form.cod = 'PROD-001';
-    }
   }
-  
+
+  // Cargar materiales si no lo ha hecho
+  if (!materialStore.materiales.length) materialStore.fetchMateriales();
+
   productDialog.value.showModal();
 }
 
-function closeDialog() {
-  productDialog.value.close();
-  resetForm();
-}
-
-function resetForm() {
-  form.id = null;
-  form.cod = '';
-  form.name = '';
-  form.unit_cost = 0;
-  form.stock = 0;
-  form.bom = [];
-  clearErrors();
-}
-
-function addBomItem() {
-  form.bom.push({ cod: '', qty: 1 });
-}
-
-function removeBomItem(index) {
-  form.bom.splice(index, 1);
-}
+function closeDialog() { productDialog.value.close(); resetForm(); }
+function resetForm() { form.id = null; form.cod = ''; form.name = ''; form.porcentajeRedito = 30; form.cantidadProduccion = 1; form.bom = []; clearErrors(); }
+function addBomItem() { form.bom.push({ cod_material: '', cantidad: 1 }); }
+function removeBomItem(index) { form.bom.splice(index, 1); }
 
 async function saveProduct() {
   if (!validateForm()) return;
-
   isSaving.value = true;
+
   try {
-    if (dialogMode.value === 'new') {
-      await productoStore.addProducto({...form});
-    } else {
-      await productoStore.updateProducto(form.id, {...form});
-    }
+    const payload = {
+      nombre_producto: form.name,
+      codigo: form.cod,
+      porcentajeRedito: form.porcentajeRedito / 100, // enviar decimal al backend
+      bom: form.bom.map(i => ({
+        cod_material: i.cod_material,
+        cantidad: i.cantidad * form.cantidadProduccion
+      }))
+    };
+    // Solo creación por ahora
+    console.log("payload", payload);
+    await productoStore.addProducto(payload);
+
     closeDialog();
   } catch (error) {
     console.error('Error al guardar producto:', error);
-    if (error.response && error.response.data) {
-      alert(`Error: ${error.response.data.message}`);
-    } else {
-      alert('Ocurrió un error al guardar el producto');
-    }
+    alert(error?.response?.data?.message || 'Ocurrió un error al guardar el producto');
   } finally {
     isSaving.value = false;
   }
 }
 
-function confirmDelete(product) {
-  productToDelete.value = product;
-  confirmDialog.value.showModal();
-}
 
-function closeConfirmDialog() {
-  confirmDialog.value.close();
-  productToDelete.value = null;
-}
+function confirmDelete(product) { productToDelete.value = product; confirmDialog.value.showModal(); }
+function closeConfirmDialog() { confirmDialog.value.close(); productToDelete.value = null; }
 
 async function deleteProduct() {
   if (!productToDelete.value) return;
-
   isDeleting.value = true;
-  try {
-    await productoStore.deleteProducto(productToDelete.value.id);
-    closeConfirmDialog();
-  } catch (error) {
-    console.error('Error al eliminar producto:', error);
-    alert('Ocurrió un error al eliminar el producto');
-  } finally {
-    isDeleting.value = false;
-  }
+  try { await productoStore.deleteProducto(productToDelete.value.id_producto); closeConfirmDialog(); }
+  catch (error) { console.error('Error al eliminar producto:', error); alert('Ocurrió un error al eliminar el producto'); }
+  finally { isDeleting.value = false; }
 }
 
 async function loadProductos() {
-  try {
-    await Promise.all([
-      productoStore.fetchProductos(),
-      materialStore.fetchMateriales()
-    ]);
-  } catch (error) {
-    console.error('Error al cargar datos:', error);
-  }
+  try { await Promise.all([productoStore.fetchProductos(), materialStore.fetchMateriales()]); }
+  catch (error) { console.error('Error al cargar datos:', error); }
 }
 
-// Inicialización
 onMounted(async () => {
   await loadProductos();
-  
-  nextTick(() => {
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-      new Tooltip(el);
-    });
-  });
+  nextTick(() => { document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new Tooltip(el)); });
 });
 </script>
 
 <style scoped>
-.table-responsive {
-  overflow-x: auto;
-  min-height: 300px;
-}
-
-.blinking-icon {
-  animation: blink 1.5s infinite;
-}
-
-@keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
-}
-
-dialog {
-  width: 90%;
-  max-width: 800px;
-  border-radius: 8px;
-  border: none;
-}
-
-dialog::backdrop {
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
-
-.spinner-border {
-  width: 1rem;
-  height: 1rem;
-  border-width: 0.15em;
-}
-
-.btn-close {
-  font-size: 0.75rem;
-}
-
-.is-invalid {
-  border-color: #dc3545;
-}
-
-.invalid-feedback {
-  color: #dc3545;
-  font-size: 0.875em;
-}
+.table-responsive { overflow-x: auto; min-height: 300px; }
+dialog { width: 90%; max-width: 800px; border-radius: 8px; border: none; }
+dialog::backdrop { background-color: rgba(0, 0, 0, 0.5); }
+.blinking-icon { animation: blink 1.5s infinite; }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+.spinner-border { width: 1rem; height: 1rem; border-width: 0.15em; }
+.btn-close { font-size: 0.75rem; }
+.is-invalid { border-color: #dc3545; }
+.invalid-feedback { color: #dc3545; font-size: 0.875em; }
 </style>
