@@ -216,11 +216,11 @@ const errors = reactive({});
 
 // Computed
 const filteredProducts = computed(() => {
-  const searchTerm = filter.value.toLowerCase();
+  const searchTerm = filter?.value?.toLowerCase();
   return productoStore.productos.filter(p => 
-    p.name.toLowerCase().includes(searchTerm) || 
-    p.cod.toLowerCase().includes(searchTerm)
-  ).sort((a, b) => a.name.localeCompare(b.name));
+    p?.name?.toLowerCase().includes(searchTerm) || 
+    p?.cod?.toLowerCase().includes(searchTerm)
+  ).sort((a, b) => a?.name?.localeCompare(b.name));
 });
 
 const dialogTitle = computed(() => {

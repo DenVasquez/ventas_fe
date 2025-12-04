@@ -39,8 +39,8 @@ import { useRouter } from 'vue-router';
 const auth = useAuth();
 const router = useRouter();
 
-const usuario = ref('admin'); // Usuario administrador por defecto
-const password = ref('admin123');
+const usuario = ref('svasquez'); // Usuario administrador por defecto
+const password = ref('Abc123$$');
 const error = ref('');
 const loading = ref(false);
 

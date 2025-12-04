@@ -6,6 +6,7 @@ export const fetchProductos = async ({ page = 1, limit = 10, search = '' } = {})
   });
 
   // Backend retorna: { success, data: [...] }
+  console.log(data)
   return data;
 };
 

@@ -5,10 +5,13 @@ export const useProductoStore = defineStore('producto', {
   state: () => ({
     productos: [],
     loading: false,
-    error: null
+    error: null,
+    page: 1,
+    limit: 10,
+    search: ""
   }),
   actions: {
-    async fetchProductos() {
+    async fetchProductos(page = 1) {
       this.loading = true;
       this.error = null;
       try {
