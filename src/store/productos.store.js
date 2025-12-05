@@ -12,35 +12,43 @@ export const useProductoStore = defineStore('productoStore', {
   }),
   actions: {
     async fetchProductos(page = 1) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const result = await fetchProductos({
-          page,
-          limit: this.limit,
-          search: this.search
-        });
-        // result.data contiene el array del backend
-        this.productos = result.data.map(m => ({
-          id: m.id_producto,
-          cod: m.codigo,
-          name: m.nombre_producto,
-          price: m.precio_venta,
-          manufacturing_cost: m.costo_fabricacion,
-          utility: Number(m.utilidad)
-        }));
-      } catch (error) {
-        this.error = error.message;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
+  this.loading = true;
+  this.error = null;
+  try {
+    const result = await fetchProductos({
+      page,
+      limit: this.limit,
+      search: this.search
+    });
+
+    this.productos = result.data.map(m => ({
+      id: m.id_producto,
+      cod: m.codigo,
+      name: m.nombre_producto,
+      price: m.precio_venta,
+      manufacturing_cost: m.costo_fabricacion,
+      utility: Number(m.utilidad),
+      quantity: m.cantidad || 1,
+      bom: m.materiales.map(mat => ({
+        cod_material: mat.cod_material,
+        nombre_material: mat.nombre_material,
+        cantidad: mat.cantidad_usada,
+        costo: mat.costo
+      }))
+    }));
+
+  } catch (error) {
+    this.error = error.message;
+    throw error;
+  } finally {
+    this.loading = false;
+  }
+},
+
         async addProducto(Producto) {
-          console.log("addProducto en store");
-      await createProducto(Producto);
-      await this.fetchProductos(this.page);
-    },
+          await createProducto(Producto);
+          await this.fetchProductos(this.page);
+        },
 
     async updateProducto(id, Producto) {
       await updateProducto(id, Producto);

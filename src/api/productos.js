@@ -8,12 +8,12 @@ export const fetchProductos = async ({ page = 1, limit = 10, search = '' } = {})
 };
 
 export const createProducto = async (producto) => {
-  console.log("estoy createProducto");
-  console.log("object", producto);
+  // console.log("object", producto);
   const { data } = await api.post('/productos', {
     codigo: producto.cod,
     nombre_producto: producto.nombre_producto,
     porcentajeRedito: producto.porcentajeRedito,
+    cantidad: producto.cantidad,
     bom: producto.bom
   });
   return data;

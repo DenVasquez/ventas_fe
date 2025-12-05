@@ -8,303 +8,375 @@
     </div>
 
     <div class="mb-3">
-      <input v-model="filter" type="text" class="form-control" placeholder="Filtrar por nombre o código..." 
-             :disabled="productoStore.loading" />
+      <input v-model="filter" type="text" class="form-control"
+        placeholder="Filtrar por nombre o código..." :disabled="productoStore.loading" />
     </div>
 
-    <!-- Estado de carga -->
+    <!-- Loading -->
     <div v-if="productoStore.loading && !productoStore.productos.length" class="text-center my-4">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Cargando...</span>
-      </div>
+      <div class="spinner-border text-primary"></div>
       <p class="mt-2">Cargando productos...</p>
     </div>
 
-    <!-- Mensaje de error -->
+    <!-- Error -->
     <div v-else-if="productoStore.error" class="alert alert-danger">
-      <i class="fa-solid fa-triangle-exclamation me-2"></i>
-      Error al cargar productos: {{ productoStore.error }}
-      <button class="btn btn-sm btn-outline-danger ms-2" @click="loadProductos">
-        Reintentar
-      </button>
+      Error: {{ productoStore.error }}
+      <button class="btn btn-sm btn-outline-danger ms-2" @click="loadProductos">Reintentar</button>
     </div>
 
-    <!-- Mensaje cuando no hay productos -->
+    <!-- Empty -->
     <div v-else-if="!productoStore.productos.length" class="alert alert-info">
-      <i class="fa-solid fa-circle-info me-2"></i>
       No se encontraron productos registrados.
     </div>
 
-    <!-- Tabla de productos -->
-    <div v-else class="table-responsive">
-      <table class="table table-bordered table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th width="120">Acciones</th>
-            <th width="100">Código</th>
-            <th>Nombre</th>
-            <th width="120">Costo Fabricación</th>
-            <th width="120">Precio Venta</th>
-            <th>Materiales</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="producto in filteredProducts" :key="producto.id_producto">
-            <td>
-              <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-primary me-1" @click="openDialog('view', producto)"
-                        :disabled="productoStore.loading">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-success me-1" @click="openDialog('edit', producto)"
-                        :disabled="productoStore.loading">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary me-2" @click="confirmDelete(producto)"
-                        :disabled="productoStore.loading">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
-            </td>
-            <td>{{ producto.codigo }}</td>
-            <td>{{ producto.nombre_producto }}</td>
-            <td class="text-end">{{ formatCurrency(producto.costo_fabricacion) }}</td>
-            <td class="text-end">{{ formatCurrency(producto.precio_venta) }}</td>
-            <td>{{ formatBOM(producto.bom) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- Table -->
+<div v-else class="table-responsive">
+  <table class="table table-bordered table-hover mb-0">
+    <thead class="table-light">
+      <tr>
+        <th width="120">Acciones</th>
+        <th width="100">Código</th>
+        <th>Nombre</th>
+        <th width="120">Precio Venta</th>
+        <th width="100">Cantidad</th>
+        <th width="120">Costo Fabricación</th>
+        <th>Materiales</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="producto in filteredProducts" :key="producto.id">
+        <td>
+          <button class="btn btn-sm btn-outline-primary me-1"
+            @click="openDialog('view', producto)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-success me-1"
+            @click="openDialog('edit', producto)">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary"
+            @click="confirmDelete(producto)">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+        <td>{{ producto.cod }}</td>
+        <td>{{ producto.name }}</td>
+        <td class="text-end">{{ formatCurrency(producto.price) }}</td>
+        <td>{{ producto.quantity }}</td>
+        <td class="text-end">{{ formatCurrency(producto.manufacturing_cost) }}</td>
+        <td>
+          <ul class="mb-0">
+            <li v-for="mat in producto.bom" :key="mat.cod_material">
+              {{ mat.nombre_material }} ({{ mat.cantidad }})
+            </li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-    <!-- Modal para CRUD -->
+
+    <!-- Modal CRUD -->
     <dialog ref="productDialog" class="p-0 border-0">
       <form @submit.prevent="saveProduct" class="p-3">
-        <h5 class="d-flex justify-content-between align-items-center">
+
+        <h5 class="d-flex justify-content-between">
           <span>{{ dialogTitle }}</span>
-          <button type="button" class="btn-close" @click="closeDialog" aria-label="Close"></button>
+          <button class="btn-close" type="button" @click="closeDialog"></button>
         </h5>
 
+        <!-- Código / nombre / cantidad -->
         <div class="row g-2 mb-2">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Código</label>
-            <input v-model="form.cod" type="text" class="form-control" :readonly="isViewing" required
-                   :class="{ 'is-invalid': errors.cod }" />
+            <input v-model="form.cod" type="text" class="form-control"
+              :readonly="isViewing" :class="{ 'is-invalid': errors.cod }" />
             <div class="invalid-feedback">{{ errors.cod }}</div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Nombre Producto</label>
-            <input v-model="form.name" type="text" class="form-control" :readonly="isViewing" required
-                   :class="{ 'is-invalid': errors.name }" />
+
+          <div class="col-md-4">
+            <label class="form-label">Nombre</label>
+            <input v-model="form.name" type="text" class="form-control"
+              :readonly="isViewing" :class="{ 'is-invalid': errors.name }" />
             <div class="invalid-feedback">{{ errors.name }}</div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Cantidad</label>
+            <input v-model.number="form.cantidad" type="number" step="1" min="1"
+              class="form-control" :readonly="isViewing"
+              :class="{ 'is-invalid': errors.cantidad }" />
+            <div class="invalid-feedback">{{ errors.cantidad }}</div>
           </div>
         </div>
 
+        <!-- Porcentaje -->
         <div class="row g-2 mb-2">
           <div class="col-md-6">
-            <label class="form-label">Cantidad a producir</label>
-            <input v-model.number="form.cantidadProduccion" type="number" step="1" min="1" class="form-control"
-                   :readonly="isViewing" required :class="{ 'is-invalid': errors.cantidadProduccion }" />
-            <div class="invalid-feedback">{{ errors.cantidadProduccion }}</div>
-          </div>
-          <div class="col-md-6">
             <label class="form-label">Porcentaje de redito (%)</label>
-            <input v-model.number="form.porcentajeRedito" type="number" step="1" min="0" max="100" class="form-control"
-                   :readonly="isViewing" required :class="{ 'is-invalid': errors.porcentajeRedito }" />
+            <input v-model.number="form.porcentajeRedito" type="number" step="1" min="0" max="100"
+              class="form-control" :readonly="isViewing"
+              :class="{ 'is-invalid': errors.porcentajeRedito }" />
             <div class="invalid-feedback">{{ errors.porcentajeRedito }}</div>
           </div>
         </div>
 
+        <!-- BOM -->
         <div class="mb-3">
           <label class="form-label">Lista de Materiales (BOM)</label>
-          <div v-for="(item, index) in form.bom" :key="index" class="d-flex align-items-center mb-2">
-            <select v-model="item.cod_material" class="form-select me-2" :disabled="isViewing" required
-                    :class="{ 'is-invalid': errors[`bom-${index}-cod`] }">
-              <option value="">Seleccionar material</option>
-              <option v-for="material in materialStore.materiales" :key="material.id" :value="material.id">
-                {{ material.name }} ({{ material.cod }}) - Stock: {{ material.stock }}
-              </option>
-            </select>
-            <input v-model.number="item.cantidad" type="number" min="1" step="1" class="form-control me-2"
-                   style="width: 100px;" :readonly="isViewing" required
-                   :class="{ 'is-invalid': errors[`bom-${index}-cantidad`] }" />
-            <button v-if="!isViewing" type="button" class="btn btn-sm btn-outline-secondary" @click="removeBomItem(index)">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-            <div class="invalid-feedback">{{ errors[`bom-${index}-cod`] || errors[`bom-${index}-cantidad`] }}</div>
+          <div v-for="(item, index) in form.bom" :key="index" class="mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <select v-model="item.cod_material" class="form-select me-2"
+                :disabled="isViewing" style="min-width: 280px;"
+                :class="{ 'is-invalid': errors[`bom-${index}-cod`] }">
+                <option value="">Seleccionar material</option>
+                <option v-for="m in materialStore.materiales" :key="m.id" :value="m.id">
+                  {{ m.name }} ({{ m.cod }}) - Bs. {{ m.unit_cost }} | {{ m.stock }}
+                </option>
+              </select>
+
+              <input
+                v-model.number="item.cantidad"
+                type="number"
+                min="1"
+                step="1"
+                class="form-control me-2"
+                style="width: 110px;"
+                :readonly="isViewing"
+                :class="{ 'is-invalid': errors[`bom-${index}-cantidad`] }"
+              />
+              <div class="me-2 text-center" style="min-width: 80px;">
+                <small>Cantidad Total</small>
+                <div >{{ item.cantidad*form.cantidad}}</div>               
+              </div>
+              <div class="me-2 text-center" style="min-width: 80px;">
+                <small>Stock</small>
+                <div >{{ getAvailableStock(item) }}</div>
+              </div>
+
+              <div class="me-2 text-end" style="min-width: 140px;">
+                <small class="d-block">Subtotal por Unidad</small>
+                <strong>{{ formatCurrency(rowSubtotal(item)) }}</strong>
+              </div>
+
+              <button v-if="!isViewing" class="btn btn-sm btn-outline-danger"
+                type="button" @click="removeBomItem(index)">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
           </div>
-          <button v-if="!isViewing" type="button" class="btn btn-sm btn-outline-secondary" @click="addBomItem">
-            <i class="fa-solid fa-plus me-2"></i>Agregar Material
+
+          <button v-if="!isViewing" type="button" class="btn btn-sm btn-outline-secondary"
+            @click="addBomItem">
+            <i class="fa-solid fa-plus me-1"></i>Agregar Material
           </button>
         </div>
 
+        <!-- RESUMEN -->
+        <div class="p-3 border rounded bg-light">
+          <h6 class="mb-2">Resumen de Costos (por unidad)</h6>
+          <div class="d-flex justify-content-between mb-1">
+            <span>Costo total materiales</span>
+            <strong>{{ formatCurrency(costoTotalMateriales) }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span>Utilidad ({{ form.porcentajeRedito }}%)</span>
+            <strong>{{ formatCurrency(utilidadCalculada) }}</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span>Precio sugerido de venta</span>
+            <strong class="text-primary">{{ formatCurrency(precioVentaCalculado) }}</strong>
+          </div>
+        </div>
+
+        <!-- BOTONES -->
         <div class="d-flex justify-content-end mt-3">
-          <button type="button" class="btn btn-secondary me-2" @click="closeDialog" :disabled="isSaving">
+          <button type="button" class="btn btn-secondary me-2" @click="closeDialog">
             Cancelar
           </button>
           <button v-if="!isViewing" type="submit" class="btn btn-outline-primary" :disabled="isSaving">
-            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-            {{ form.id ? 'Actualizar' : 'Guardar' }}
+            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+            {{ form.id ? "Actualizar" : "Guardar" }}
           </button>
         </div>
       </form>
     </dialog>
 
-    <!-- Modal de confirmación para eliminar -->
+    <!-- Confirmación -->
     <dialog ref="confirmDialog" class="p-3 border-0">
-      <h5 class="mb-3"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Confirmar eliminación</h5>
-      <p>¿Está seguro de eliminar el producto <strong>{{ productToDelete?.name }}</strong> ({{ productToDelete?.cod }})?</p>
+      <h5><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>
+        Confirmar eliminación</h5>
+      <p>¿Eliminar <strong>{{ productToDelete?.name }}</strong>?</p>
+
       <div class="d-flex justify-content-end mt-3">
-        <button type="button" class="btn btn-secondary me-2" @click="closeConfirmDialog" :disabled="isDeleting">
-          Cancelar
-        </button>
-        <button type="button" class="btn btn-outline-secondary" @click="deleteProduct" :disabled="isDeleting">
-          <span v-if="isDeleting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-          Eliminar
-        </button>
+        <button class="btn btn-secondary me-2" @click="closeConfirmDialog">Cancelar</button>
+        <button class="btn btn-outline-danger" @click="deleteProduct">Eliminar</button>
       </div>
     </dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue';
-import { useProductoStore } from '../store/productos.store';
-import { useMaterialStore } from '../store/material.store';
-import { Tooltip } from 'bootstrap';
+import { ref, reactive, computed, onMounted, nextTick } from "vue";
+import { useProductoStore } from "../store/productos.store";
+import { useMaterialStore } from "../store/material.store";
+import { Tooltip } from "bootstrap";
+import Swal from "sweetalert2";
 
 const productoStore = useProductoStore();
 const materialStore = useMaterialStore();
 
-const filter = ref('');
+const filter = ref("");
 const productDialog = ref(null);
 const confirmDialog = ref(null);
-const dialogMode = ref('new');
+const dialogMode = ref("new");
 const isSaving = ref(false);
 const isDeleting = ref(false);
 const productToDelete = ref(null);
 
 const form = reactive({
   id: null,
-  cod: '',
-  name: '',
-  cantidadProduccion: 1,
-  porcentajeRedito: 30, // ahora es % entero
-  bom: []
+  cod: "",
+  name: "",
+  cantidad: 1,
+  porcentajeRedito: 30,
+  bom: [],
 });
 
 const errors = reactive({});
 
-const filteredProducts = computed(() => {
-  const searchTerm = filter?.value?.toLowerCase();
-  return productoStore.productos.filter(p =>
-    p?.nombre_producto?.toLowerCase().includes(searchTerm) ||
-    p?.codigo?.toLowerCase().includes(searchTerm)
-  ).sort((a, b) => a?.nombre_producto?.localeCompare(b.nombre_producto));
-});
+// =========================
+// HELPERS
+// =========================
 
-const dialogTitle = computed(() => {
-  switch(dialogMode.value) {
-    case 'new': return 'Nuevo Producto';
-    case 'edit': return 'Editar Producto';
-    case 'view': return 'Ver Producto';
-    default: return 'Producto';
-  }
-});
-
-const isViewing = computed(() => dialogMode.value === 'view');
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(value);
+function maxAllowed(item) {
+  const material = materialStore.materiales.find(m => m.id === item.cod_material);
+  if (!material) return 1;
+  return Math.max(1, material.stock);
 }
 
-function formatBOM(bom) {
-  return bom?.map(item => {
-    const material = materialStore.materiales.find(m => m.id === item.cod_material);
-    return `${material?.name || item.cod_material} (${item.cantidad})`;
-  }).join(', ') || 'Sin materiales';
+function getAvailableStock(item) {
+  const material = materialStore.materiales.find(m => m.id === item.cod_material);
+  if (!material) return 0;
+  return Math.max(0, (material.stock - (item.cantidad*form.cantidad)));
 }
 
-function clearErrors() { Object.keys(errors).forEach(key => delete errors[key]); }
+function rowSubtotal(item) {
+  const material = materialStore.materiales.find(m => m.id === item.cod_material);
+  if (!material) return 0;
+  return item.cantidad * Number(material.unit_cost || 0);
+}
 
+function updateStock(item) {
+  const max = maxAllowed(item);
+  if (item.cantidad > max) item.cantidad = max;
+  if (item.cantidad < 1 || !item.cantidad) item.cantidad = 1;
+}
+
+
+function formatCurrency(v) {
+  return new Intl.NumberFormat("es-BO", { style: "currency", currency: "BOB" }).format(v || 0);
+}
+
+const costoTotalMateriales = computed(() =>
+  form.bom.reduce((acc, item) => acc + rowSubtotal(item), 0)
+);
+
+const utilidadCalculada = computed(() =>
+  costoTotalMateriales.value * (form.porcentajeRedito / 100)
+);
+
+const precioVentaCalculado = computed(() =>
+  costoTotalMateriales.value + utilidadCalculada.value
+);
+
+function addBomItem() { form.bom.push({ cod_material: "", cantidad: 1 }); }
+function removeBomItem(i) { form.bom.splice(i, 1); }
+
+// =========================
+// VALIDACIÓN
+// =========================
+function clearErrors() { Object.keys(errors).forEach(k => delete errors[k]); }
 function validateForm() {
   clearErrors();
-  let isValid = true;
+  let valid = true;
+  if (!form.cod.trim()) { errors.cod = "Código requerido"; valid = false; }
+  if (!form.name.trim()) { errors.name = "Nombre requerido"; valid = false; }
+  if (form.cantidad < 1) { errors.cantidad = "Debe ser >= 1"; valid = false; }
+  if (form.porcentajeRedito < 0 || form.porcentajeRedito > 100) { errors.porcentajeRedito = "Entre 0 y 100"; valid = false; }
 
-  if (!form.cod.trim()) { errors.cod = 'El código es requerido'; isValid = false; }
-  if (!form.name.trim()) { errors.name = 'El nombre es requerido'; isValid = false; }
-  if (form.porcentajeRedito < 0 || form.porcentajeRedito > 100) { errors.porcentajeRedito = 'Debe estar entre 0 y 100'; isValid = false; }
-  if (form.cantidadProduccion < 1) { errors.cantidadProduccion = 'Cantidad mínima 1'; isValid = false; }
-
-  form.bom.forEach((item, index) => {
-    if (!item.cod_material) { errors[`bom-${index}-cod`] = 'Seleccione un material'; isValid = false; }
-    if (!item.cantidad || item.cantidad < 1) { errors[`bom-${index}-cantidad`] = 'Cantidad inválida'; isValid = false; }
-    else {
-      const material = materialStore.materiales.find(m => m.id_material === item.cod_material);
-      if (material && (item.cantidad * form.cantidadProduccion) > material.stock) {
-        errors[`bom-${index}-cantidad`] = `Stock insuficiente (${material.stock} disponibles)`;
-        isValid = false;
-      }
-    }
+  if (!form.bom.length) { errors.bom = "Debe agregar al menos 1 material"; valid = false; }
+  form.bom.forEach((item, idx) => {
+    if (!item.cod_material) { errors[`bom-${idx}-cod`] = "Seleccione un material"; valid = false; }
+    if (item.cantidad < 1 || item.cantidad > maxAllowed(item)) { errors[`bom-${idx}-cantidad`] = `Cantidad inválida`; valid = false; }
   });
 
-  if (form.bom.length === 0) { errors.bom = 'Debe agregar al menos un material'; isValid = false; }
-
-  return isValid;
+  return valid;
 }
 
+// =========================
+// CRUD
+// =========================
 function openDialog(mode, product = null) {
   dialogMode.value = mode;
-
   if (product) {
     form.id = product.id_producto;
     form.cod = product.codigo;
     form.name = product.nombre_producto;
-    form.porcentajeRedito = Math.round((product.utilidad / product.costo_fabricacion) * 100);
-    form.cantidadProduccion = 1;
-    form.bom = JSON.parse(JSON.stringify(product.bom || []));
+    form.cantidad = product.cantidad || 1;
+    const porcentaje = Math.round((product.utilidad / product.costo_fabricacion) * 100);
+    form.porcentajeRedito = porcentaje || 30;
+    form.bom = product.bom.map(b => ({ cod_material: b.cod_material, cantidad: b.cantidad }));
   } else {
     form.id = null;
-    form.cod = `PROD-${(productoStore.productos.length + 1).toString().padStart(3, '0')}`;
-    form.name = '';
+    form.cod = `PROD-${(productoStore.productos.length + 1).toString().padStart(3, "0")}`;
+    form.name = "";
+    form.cantidad = 1;
     form.porcentajeRedito = 30;
-    form.cantidadProduccion = 1;
     form.bom = [];
     addBomItem();
   }
-
-  // Cargar materiales si no lo ha hecho
   if (!materialStore.materiales.length) materialStore.fetchMateriales();
-
   productDialog.value.showModal();
 }
 
-function closeDialog() { productDialog.value.close(); resetForm(); }
-function resetForm() { form.id = null; form.cod = ''; form.name = ''; form.porcentajeRedito = 30; form.cantidadProduccion = 1; form.bom = []; clearErrors(); }
-function addBomItem() { form.bom.push({ cod_material: '', cantidad: 1 }); }
-function removeBomItem(index) { form.bom.splice(index, 1); }
+function closeDialog() { productDialog.value.close(); }
 
 async function saveProduct() {
   if (!validateForm()) return;
-  isSaving.value = true;
 
+  isSaving.value = true;
   try {
     const payload = {
+      cod: form.cod,
       nombre_producto: form.name,
-      codigo: form.cod,
-      porcentajeRedito: form.porcentajeRedito / 100, // enviar decimal al backend
-      bom: form.bom.map(i => ({
-        cod_material: i.cod_material,
-        cantidad: i.cantidad * form.cantidadProduccion
-      }))
+      cantidad: form.cantidad,
+      porcentajeRedito: form.porcentajeRedito,
+      bom: form.bom.map(b => ({ cod_material: b.cod_material, cantidad: b.cantidad })),
     };
-    // Solo creación por ahora
-    console.log("payload", payload);
+
     await productoStore.addProducto(payload);
+    await materialStore.fetchMateriales();
 
     closeDialog();
+
+    // ✅ Mensaje de éxito
+    Swal.fire({
+      icon: 'success',
+      title: 'Producto registrado',
+      text: `El producto "${form.name}" se ha guardado correctamente`,
+      timer: 5000,
+      showConfirmButton: false
+    });
+
   } catch (error) {
-    console.error('Error al guardar producto:', error);
-    alert(error?.response?.data?.message || 'Ocurrió un error al guardar el producto');
+    // ❌ Mensaje de error
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al guardar',
+      text: error?.response?.data?.message || 'Ocurrió un error al guardar el producto',
+    });
   } finally {
     isSaving.value = false;
   }
@@ -312,36 +384,32 @@ async function saveProduct() {
 
 
 function confirmDelete(product) { productToDelete.value = product; confirmDialog.value.showModal(); }
-function closeConfirmDialog() { confirmDialog.value.close(); productToDelete.value = null; }
+function closeConfirmDialog() { confirmDialog.value.close(); }
+async function deleteProduct() { isDeleting.value = true; try { await productoStore.deleteProducto(productToDelete.value.id_producto); closeConfirmDialog(); } finally { isDeleting.value = false; } }
 
-async function deleteProduct() {
-  if (!productToDelete.value) return;
-  isDeleting.value = true;
-  try { await productoStore.deleteProducto(productToDelete.value.id_producto); closeConfirmDialog(); }
-  catch (error) { console.error('Error al eliminar producto:', error); alert('Ocurrió un error al eliminar el producto'); }
-  finally { isDeleting.value = false; }
-}
-
-async function loadProductos() {
-  try { await Promise.all([productoStore.fetchProductos(), materialStore.fetchMateriales()]); }
-  catch (error) { console.error('Error al cargar datos:', error); }
-}
+async function loadProductos() { await Promise.all([productoStore.fetchProductos(), materialStore.fetchMateriales()]); }
 
 onMounted(async () => {
   await loadProductos();
-  nextTick(() => { document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new Tooltip(el)); });
+  nextTick(() => {
+    document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(el => new Tooltip(el));
+  });
 });
+
+const filteredProducts = computed(() => {
+  if (!filter.value.trim()) return productoStore.productos;
+  return productoStore.productos.filter(p =>
+    p.nombre_producto.toLowerCase().includes(filter.value.toLowerCase()) ||
+    p.codigo.toLowerCase().includes(filter.value.toLowerCase())
+  );
+});
+
+const isViewing = computed(() => dialogMode.value === "view");
+const dialogTitle = computed(() => dialogMode.value === "new" ? "Nuevo Producto" : dialogMode.value === "edit" ? "Editar Producto" : "Ver Producto");
 </script>
 
 <style scoped>
 .table-responsive { overflow-x: auto; min-height: 300px; }
-dialog { width: 90%; max-width: 800px; border-radius: 8px; border: none; }
-dialog::backdrop { background-color: rgba(0, 0, 0, 0.5); }
-.blinking-icon { animation: blink 1.5s infinite; }
-@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-.spinner-border { width: 1rem; height: 1rem; border-width: 0.15em; }
-.btn-close { font-size: 0.75rem; }
-.is-invalid { border-color: #dc3545; }
-.invalid-feedback { color: #dc3545; font-size: 0.875em; }
+dialog { width: 90%; max-width: 900px; border-radius: 8px; border: none; }
+dialog::backdrop { background-color: rgba(0, 0, 0, 0.4); }
 </style>
